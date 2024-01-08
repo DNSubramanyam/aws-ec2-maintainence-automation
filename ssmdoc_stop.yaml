@@ -12,7 +12,7 @@ parameters:
   SnsTopicARN:
     type: String
     description: SNS topic ARN
-    default: arn:aws:sns:us-east-1:366951018568:EC2-maintanance-automation
+    default: aarn:aws:sns:us-east-1:366951018568:EC2-maintanance-automation
 mainSteps:
   - name: PublishSNSNotification
     action: aws:executeAwsApi
