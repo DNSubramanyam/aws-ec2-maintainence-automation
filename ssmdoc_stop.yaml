@@ -1,0 +1,25 @@
+description: EC2 instance maintenance automation
+schemaVersion: '0.3'
+assumeRole: '{{ AutomationAssumeRole }}'
+parameters:
+  AutomationAssumeRole:
+    type: String
+    description: (Optional) The ARN of the role that allows Automation to perform the actions on your behalf.
+    default: arn:aws:iam::366951018568:role/custom-maintainence-automation-ssm-role
+  InstanceID:
+    type: String
+    description: SNS topic ARN
+  SnsTopicARN:
+    type: String
+    description: SNS topic ARN
+    default: arn:aws:sns:us-east-1:366951018568:EC2-maintanance-automation
+mainSteps:
+  - name: PublishSNSNotification
+    action: aws:executeAwsApi
+    isEnd: true
+    inputs:
+      Service: sns
+      Api: Publish
+      TopicArn: '{{SnsTopicARN}}'
+      Subject: EC2 Maintenance script
+      Message: '{{InstanceID}}'
