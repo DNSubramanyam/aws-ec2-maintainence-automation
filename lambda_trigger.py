@@ -1,37 +1,68 @@
 import boto3
+import json
+from pprint import pprint
+from datetime import datetime
 
-ec2 = boto3.client('ec2', region_name='us-east-1')
-ssm = boto3.client('ssm', region_name='us-east-1')
+def get_fetch_tag(action):
+    current_day = datetime.now().weekday()
+    fetch_tag = []
+    tag_everyday = {"Env": 'Dev',"Schedule": "everyday"}
+    tag_weekend = {"Env": 'Dev',"Schedule": "weekend"}
 
-def initiate_stop_execution(ins_id):
-    exec_id=ssm.start_automation_execution(
-        DocumentName='ec2-maintenance-stop',
-        DocumentVersion='$DEFAULT',
-        Parameters={
-            'InstanceID': [ins_id],
-            'SnsTopicARN': ['arn:aws:sns:us-east-1:366951018568:EC2-maintanance-automation']
-        }
-    )['AutomationExecutionId']
-    return exec_id
+    if action == 'start':
+        if current_day == 0:
+            fetch_tag =  [{'Name': 'tag:maintenance-automation', 'Values':[json.dumps(tag_weekend), json.dumps(tag_everyday)]}]
+        elif current_day in [5, 6]:
+            fetch_tag = []
+        else:
+            fetch_tag =  [{'Name': 'tag:maintenance-automation', 'Values':[json.dumps(tag_everyday)]}]
 
+    if action == 'stop':
+        if current_day == 4:
+            fetch_tag =  [{'Name': 'tag:maintenance-automation', 'Values':[json.dumps(tag_weekend), json.dumps(tag_everyday)]}]
+        elif current_day in [5, 6]:
+            fetch_tag = []
+        else:
+            fetch_tag =  [{'Name': 'tag:maintenance-automation', 'Values':[json.dumps(tag_everyday)]}]
+        return fetch_tag
+    
 def lambda_handler(event, context):
     # TODO implement
+    ec2 = boto3.client('ec2', region_name='us-east-1')
+    asg = boto3.client('autoscaling', region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 
+    table_name=event['TableName']
+    db_table = dynamodb.Table(table_name)
+    
     instance_list = []
-    executiondetails = {}
+    asg_list = []
 
-    f_tag =  {'Name': 'tag:maintenance-automation', 'Values':['weekday']}
+    if len(get_fetch_tag(event['action'])) > 0:
+        ec2_response = ec2.describe_instances(Filters= get_fetch_tag(event['action']))['Reservations']
+        for b in ec2_response:
+            for c in b['Instances']:
+                instance_list.append(c['InstanceId'])
 
-    ec2_response = ec2.describe_instances(Filters= [f_tag])['Reservations']
-    for b in ec2_response:
-        for c in b['Instances']:
-            instance_list.append(c['InstanceId'])
-            initiate_stop_execution(c['InstanceId'])
-            executiondetails[c['InstanceId']]=''
-            executiondetails[c['InstanceId']]=initiate_stop_execution(c['InstanceId'])
+    if len(instance_list) > 0:
+        asg_response = asg.describe_auto_scaling_instances(InstanceIds = instance_list)['AutoScalingInstances']
+        for a in asg_response:
+            asg_list.append(a['AutoScalingGroupName'])
+            to_write={
+                'InstanceId': a['InstanceId'],
+                'Timestamp': datetime.now().strftime("%d-%m-%Y_%H:%M:%S"),
+                'AutoScalingGroup': a['AutoScalingGroupName'],
+            }
+            db_table.put_item(Item=to_write)
+        asg_list = list(set(asg_list))
+
     return {
         'statusCode': 200,
         'action': event['action'],
-        'instances': instance_list,
-        'executionIds': executiondetails
+        'InstanceID': instance_list,
+        'ASG_list': asg_list
     }
+
+if __name__ == "__main__":
+    event = {'action': 'start', 'environment': 'Dev', 'TableName': 'maintenance-automation-table'}
+    print(lambda_handler(event, None))

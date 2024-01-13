@@ -1,18 +1,14 @@
-#path=""
-
-log_file_path='/var/log/maintenance_script.log'
-script_file_path='/tmp/atom'
-initial_status=`sh $script_file_path status|awk '{print $3}'`
-if [ ${initial_status::-1} == "stopped" ]
+script_file_path=$1
+initial_status=`sh $script_file_path status|awk '{print $3}'|sed 's/.$//'`
+if [ "$initial_status" == "stopped" ]
 then
-    echo "`date -u`[INFO] `sh atom start`" >> $log_file_path 2>&1
-    rc=$?
-    if [ ${rc} -eq 0 ]
+    sh $script_file_path start > /dev/null 2>&1
+    if [ `sh atom status|awk '{print $3}'|sed 's/.$//'` == "running" ]
     then
-        sh $script_file_path status|awk '{print $3}'|sed 's/.$//'
+        echo "running"
     else
         echo "failed"
     fi
 else
-    echo "${initial_status::-1}"
+    echo "$initial_status"
 fi
