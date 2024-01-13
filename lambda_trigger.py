@@ -4,7 +4,8 @@ from pprint import pprint
 from datetime import datetime
 
 def get_fetch_tag(action):
-    current_day = datetime.now().weekday()
+    #current_day = datetime.now().weekday()
+    current_day = 0
     fetch_tag = []
     tag_everyday = {"Env": 'Dev',"Schedule": "everyday"}
     tag_weekend = {"Env": 'Dev',"Schedule": "weekend"}
@@ -24,7 +25,7 @@ def get_fetch_tag(action):
             fetch_tag = []
         else:
             fetch_tag =  [{'Name': 'tag:maintenance-automation', 'Values':[json.dumps(tag_everyday)]}]
-        return fetch_tag
+    return fetch_tag
     
 def lambda_handler(event, context):
     # TODO implement
@@ -38,8 +39,10 @@ def lambda_handler(event, context):
     instance_list = []
     asg_list = []
 
-    if len(get_fetch_tag(event['action'])) > 0:
-        ec2_response = ec2.describe_instances(Filters= get_fetch_tag(event['action']))['Reservations']
+    filter = get_fetch_tag(event['action'])
+
+    if len(filter) > 0:
+        ec2_response = ec2.describe_instances(Filters=filter)['Reservations']
         for b in ec2_response:
             for c in b['Instances']:
                 instance_list.append(c['InstanceId'])
