@@ -5,7 +5,7 @@ from datetime import datetime
 
 def get_fetch_tag(action):
     #current_day = datetime.now().weekday()
-    current_day = 0
+    current_day = 4
     fetch_tag = []
     tag_everyday = {"Env": 'Dev',"Schedule": "everyday"}
     tag_weekend = {"Env": 'Dev',"Schedule": "weekend"}
@@ -26,7 +26,19 @@ def get_fetch_tag(action):
         else:
             fetch_tag =  [{'Name': 'tag:maintenance-automation', 'Values':[json.dumps(tag_everyday)]}]
     return fetch_tag
-    
+
+def initiate_phase1_execution(ins_id):
+    ssm = boto3.client('ssm', region_name='us-east-1')
+    exec_id=ssm.start_automation_execution(
+        DocumentName='ec2-maintenance-stop',
+        DocumentVersion='$DEFAULT',
+        Parameters={
+            'InstanceID': [ins_id],
+            'SnsTopicARN': ['arn:aws:sns:us-east-1:366951018568:EC2-maintanance-automation']
+        }
+    )['AutomationExecutionId']
+    return exec_id
+
 def lambda_handler(event, context):
     # TODO implement
     ec2 = boto3.client('ec2', region_name='us-east-1')
@@ -54,24 +66,24 @@ def lambda_handler(event, context):
                     if d['Key'] == 'Name':
                         instance_name[c['InstanceId']] = d['Value']
 
-    if len(instance_list) > 0:
-        asg_response = asg.describe_auto_scaling_instances(InstanceIds = instance_list)['AutoScalingInstances']
-        for a in asg_response:
-            asg_list.append(a['AutoScalingGroupName'])
-            to_write={
-                'InstanceId': a['InstanceId'],
-                'Timestamp': datetime.now().strftime("%d-%m-%Y_%H:%M:%S"),
-                'Name': instance_name[a['InstanceId']],
-                'AutoScalingGroup': a['AutoScalingGroupName']
-                
-            }
-            db_table.put_item(Item=to_write)
-        asg_list = list(set(asg_list))
+        if len(instance_list) > 0:
+            asg_response = asg.describe_auto_scaling_instances(InstanceIds = instance_list)['AutoScalingInstances']
+            for a in asg_response:
+                asg_list.append(a['AutoScalingGroupName'])
+                to_write={
+                    'InstanceId': a['InstanceId'],
+                    'Timestamp': datetime.now().strftime("%d-%m-%Y_%H:%M:%S"),
+                    'Name': instance_name[a['InstanceId']],
+                    'AutoScalingGroup': a['AutoScalingGroupName']
+                    
+                }
+                db_table.put_item(Item=to_write)
+            asg_list = list(set(asg_list))
 
-        for id, name in instance_name.items():
-            alarm_response = cw.describe_alarms(AlarmNamePrefix=name+ '-' + id)['MetricAlarms']
-            for f in alarm_response:
-                alarm_list.append(f['AlarmName'])
+            for id, name in instance_name.items():
+                alarm_response = cw.describe_alarms(AlarmNamePrefix=name+ '-' + id)['MetricAlarms']
+                for f in alarm_response:
+                    alarm_list.append(f['AlarmName'])
 
     return {
         'statusCode': 200,
