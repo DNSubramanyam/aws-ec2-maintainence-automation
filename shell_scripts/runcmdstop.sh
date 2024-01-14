@@ -1,11 +1,11 @@
-script_file_path=$1
+script_file_path=/tmp/atom
 initial_status=`sh $script_file_path status|awk '{print $3}'|sed 's/.$//'`
-if [ "$initial_status" == "running" ]
+if [ "$initial_status" = "running" ]
 then
     sh $script_file_path stop > /dev/null 2>&1
-    if [ `sh atom status|awk '{print $3}'|sed 's/.$//'` == "stopped" ]
+    if [ `sh atom status|awk '{print $3}'|sed 's/.$//'` = "offline" ]
     then
-        echo "stopped"
+        echo "offline"
     else
         echo "failed"
     fi
