@@ -2,9 +2,9 @@ import boto3
 import json
 from pprint import pprint
 
-instance_list = ['i-0ffe573476fedb1fe', 'i-070695bd0f30decc8']
-asg_list = ['maintenance-asg-2']
-tag_value = {"Env": "Dev", "Schedule": "weekend"}
+instance_list = ['i-01573f60b88c34f0a']
+asg_list = ['Atom_DV_G1_A1_01-ASG']
+tag_value = {"Env": "Dev", "Schedule": "everyday"}
 
 f_tag = [{'Key': 'maintenance-automation', 'Value': json.dumps(tag_value)}]
 asg_tag={'Key': 'maintenance-automation', 'Value': json.dumps(tag_value)}

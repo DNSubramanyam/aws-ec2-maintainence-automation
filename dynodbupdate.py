@@ -1,8 +1,9 @@
-import boto3
 from pprint import pprint
-
-def lambda_handler(event, context):
+def update_atom_status_to_db(event, context):
     # TODO implement
+    import boto3
+    from datetime import datetime
+
     con = boto3.session.Session()
     dynamodb = con.resource('dynamodb', region_name='us-east-1')
 
@@ -10,16 +11,16 @@ def lambda_handler(event, context):
     db_table = dynamodb.Table(table_name)
     response = db_table.update_item(
         Key={
-            'InstanceId': 'i-0ce263f9a90c1ab9d',
-            'Timestamp': '13-01-2024'
+            'InstanceId': 'i-03fedc8397cfeb632'
         },
         UpdateExpression='set AppStopped = :val1, ServerStatus = :val3',
         ExpressionAttributeValues={
             ':val1': 'Yes',
             ':val2': 'start',
-            ':val3': 'Checking'
+            ':val3': 'Checking',
+            ':val4': datetime.now().strftime("%d-%m-%Y")
         },
-        ConditionExpression= "begins_with(Process, :val2)"
+        ConditionExpression= "begins_with(Process, :val2) AND begins_with(Timestamp, :val4)"
     )
 
     return response
@@ -31,4 +32,4 @@ if __name__ == "__main__":
         'City': 'Bezawada'
     }
     event = {'to_write': item}
-    pprint(lambda_handler(event, None))
+    pprint(update_atom_status_to_db(event, None))

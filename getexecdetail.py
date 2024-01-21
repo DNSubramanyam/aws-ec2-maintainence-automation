@@ -12,6 +12,6 @@ def get_cmd_output(cid, ins):
 
 
 if __name__ == "__main__":
-    CmdId = "0733c8fb-51e3-4bd9-9ff5-2b5012e5a1b5"
-    ins_list = ["i-06062a3ab33387326","i-005bc05b354361bab"]
+    CmdId = "5c0378c6-3146-405f-9105-1324909e40f5"
+    ins_list = ["i-03fedc8397cfeb632"]
     get_cmd_output(CmdId, ins_list)
